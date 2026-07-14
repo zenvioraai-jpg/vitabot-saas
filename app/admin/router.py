@@ -1143,6 +1143,27 @@ async def api_save_training(body: dict, token: str = Query(default=""),
     return {"status": "ok"}
 
 
+@router.get("/api/business-info")
+def api_get_business_info(token: str = Query(default=""), db: Session = Depends(get_db)):
+    """Campos extra sugeridos según el tipo de negocio de la empresa + sus valores guardados."""
+    from app.onboarding_templates import BUSINESS_TYPES, get_extra_fields
+    company = _require_company(db, token)
+    return {
+        "business_type": company.business_type,
+        "business_type_label": BUSINESS_TYPES.get(company.business_type, "Otro"),
+        "fields": get_extra_fields(company.business_type),
+        "values": crud.get_extra_config(db, company.id),
+    }
+
+
+@router.post("/api/business-info")
+async def api_save_business_info(body: dict, token: str = Query(default=""),
+                                 authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    company = _require_company(db, _auth(token, authorization))
+    crud.save_extra_config(db, company.id, body.get("values", {}))
+    return {"status": "ok"}
+
+
 @router.get("/api/promo-config")
 def api_get_promo(token: str = Query(default=""), db: Session = Depends(get_db)):
     company = _require_company(db, token)

@@ -44,6 +44,7 @@ def build_system_prompt(
     coupons: list | None = None,
     training_notes: str | None = None,
     bot_name: str | None = None,
+    extra_info: str | None = None,
 ) -> str:
     company_name = (company_name or "la empresa").strip()
     bot_name = (bot_name or "Asistente").strip() or "Asistente"
@@ -60,6 +61,14 @@ def build_system_prompt(
             "servicios, políticas y modo de uso. Tiene prioridad sobre descripciones genéricas. "
             "Úsala con naturalidad, sin recitarla toda de golpe.\n\n"
             + training_notes.strip()
+        )
+
+    # Campos extra propios del tipo de negocio (horario, tallas, zonas, duración de citas, etc.)
+    extra_ctx = ""
+    if extra_info and extra_info.strip():
+        extra_ctx = (
+            "\n━━━ INFORMACIÓN DEL NEGOCIO (configurada en el panel) ━━━\n" + extra_info.strip()
+            + "\nÚsala con naturalidad cuando sea relevante para la conversación."
         )
 
     # Bloque de datos de pago (cuentas / Bre-B configuradas en el panel)
@@ -291,6 +300,7 @@ CIERRA NATURAL: Cuando el cliente está decidido, confirma sin dramatismo.
 ━━━ CATÁLOGO DE PRODUCTOS/SERVICIOS ━━━
 {_format_catalog(products)}
 {training_ctx}
+{extra_ctx}
 
 ━━━ FLUJO DE PEDIDOS — NATURAL Y SIN PRESIÓN ━━━
 Cuando un cliente quiera confirmar una compra, sigue este orden. Es una conversación, no un formulario. Haz una pregunta por vez.

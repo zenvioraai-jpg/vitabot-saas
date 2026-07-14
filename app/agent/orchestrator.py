@@ -650,7 +650,21 @@ def _build_customer_prompt(db, company_id: int, customer, is_first_message: bool
         coupons=[{"code": c.code, "kind": c.kind, "value": c.value} for c in crud.get_active_coupons(db, company_id)],
         training_notes=crud.get_training_notes(db, company_id),
         bot_name=crud.get_bot_name(db, company_id),
+        extra_info=_format_extra_info(db, company_id),
     )
+
+
+def _format_extra_info(db, company_id: int) -> str:
+    """Campos extra propios del tipo de negocio (horario, tallas, zonas, etc.),
+    cargados desde Configuración → Información del negocio, como texto legible."""
+    from app.onboarding_templates import get_extra_fields
+    company = crud.get_company(db, company_id)
+    if not company:
+        return ""
+    labels = get_extra_fields(company.business_type)
+    values = crud.get_extra_config(db, company_id)
+    lines = [f"  • {labels.get(k, k)}: {v}" for k, v in values.items() if (v or "").strip()]
+    return "\n".join(lines)
 
 
 async def _deliver_response(db, company_id: int, creds: WhatsAppCreds, conversation, phone_number: str,

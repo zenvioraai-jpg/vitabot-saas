@@ -52,6 +52,24 @@ def update_company(db: Session, company_id: int, **fields) -> Company | None:
     return c
 
 
+def get_extra_config(db: Session, company_id: int) -> dict:
+    """Campos extra propios del tipo de negocio (horario de restaurante, tallas de
+    ropa, etc.), guardados en Company.extra_config."""
+    import json
+    company = get_company(db, company_id)
+    if not company or not company.extra_config:
+        return {}
+    try:
+        return json.loads(company.extra_config)
+    except Exception:
+        return {}
+
+
+def save_extra_config(db: Session, company_id: int, data: dict) -> None:
+    import json
+    update_company(db, company_id, extra_config=json.dumps(data, ensure_ascii=False))
+
+
 def set_company_status(db: Session, company_id: int, status: str) -> Company | None:
     return update_company(db, company_id, status=status)
 

@@ -1418,8 +1418,8 @@ async function helpSend(){
 async function renderConfig(){
   $('#view').innerHTML='<div class="empty">Cargando…</div>';
   let media=[],pv={},cat=[],voice={},pay={},coupons=[],promo={},train={},botn={};
-  let paused={paused:false},notif={};
-  try{[media,pv,cat,voice,pay,coupons,promo,train,botn,paused,notif]=await Promise.all([api('/api/product-media'),api('/api/postventa-config'),api('/api/catalog'),api('/api/voice-config'),api('/api/payment-config'),api('/api/coupons'),api('/api/promo-config'),api('/api/training-config'),api('/api/bot-name'),api('/api/bot-paused'),api('/api/notif-config')]);}catch(e){}
+  let paused={paused:false},notif={},binfo={fields:{},values:{}};
+  try{[media,pv,cat,voice,pay,coupons,promo,train,botn,paused,notif,binfo]=await Promise.all([api('/api/product-media'),api('/api/postventa-config'),api('/api/catalog'),api('/api/voice-config'),api('/api/payment-config'),api('/api/coupons'),api('/api/promo-config'),api('/api/training-config'),api('/api/bot-name'),api('/api/bot-paused'),api('/api/notif-config'),api('/api/business-info')]);}catch(e){}
   if(S.view!=='config')return;
   S._pay=pay;
   const themes=[['dark','Azul oscuro','#0b1020','#7c3aed'],['light','Claro','#eef1f7','#6d28d9'],['black','Negro','#000000','#8b5cf6'],['green','Verde','#07130d','#22c55e']];
@@ -1493,6 +1493,15 @@ async function renderConfig(){
       <p style="color:var(--muted);font-size:12.5px;margin-bottom:10px">Así se presentará el bot con tus clientes. Ej: "¡Hola! Soy ${(botn.name||'Asistente')}, de ${COMPANY_NAME} 🌿".</p>
       <input class="search" id="bot-name" style="width:280px" value="${(botn.name||'Asistente').replace(/"/g,'&quot;')}" placeholder="Asistente">
     </div>
+    ${Object.keys(binfo.fields||{}).length?`<div class="card" style="max-width:760px;margin-bottom:18px">
+      <div class="card-h">🧩 Información del negocio (${binfo.business_type_label||''}) <button class="qbtn" onclick="saveBusinessInfo()">💾 Guardar</button></div>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px">Campos sugeridos para tu tipo de negocio. El bot los usa como contexto adicional al conversar.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${Object.entries(binfo.fields).map(([key,label])=>`
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:5px">${label}</div>
+          <input class="search bi-field" data-key="${key}" style="width:100%" value="${(binfo.values[key]||'').replace(/"/g,'&quot;')}"></div>`).join('')}
+      </div>
+    </div>`:''}
     <div class="card" style="max-width:760px;margin-bottom:18px">
       <div class="card-h">🎓 Entrenamiento del bot <button class="qbtn" onclick="saveTraining()">💾 Guardar</button></div>
       <p style="color:var(--muted);font-size:12.5px;margin-bottom:10px;line-height:1.55">Aquí defines la información oficial que el bot usa para presentar los productos: componentes, beneficios, modo de uso y rutina. Tiene prioridad alta. Edítalo cuando quieras afinar lo que el bot responde. 🌿</p>
@@ -1779,6 +1788,12 @@ async function testNotif(){
 async function saveTraining(){
   const body={notes:$('#train-notes').value};
   try{await api('/api/training-config',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify(body)});toast('✅ Entrenamiento guardado');}
+  catch(e){toast('Error: '+e.message);}
+}
+async function saveBusinessInfo(){
+  const values={};
+  document.querySelectorAll('.bi-field').forEach(inp=>{values[inp.dataset.key]=inp.value.trim();});
+  try{await api('/api/business-info',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({values})});toast('✅ Información guardada');}
   catch(e){toast('Error: '+e.message);}
 }
 
