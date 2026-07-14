@@ -1158,9 +1158,11 @@ async def api_save_promo(body: dict, token: str = Query(default=""),
 
 
 @router.post("/tasks/run-followups")
-async def run_followups(db: Session = Depends(get_db)):
+async def run_followups(token: str = Query(default=""), db: Session = Depends(get_db)):
     """Enviar seguimiento postventa a clientes con compra pagada hace N días, para
     TODAS las empresas. Pensado para llamarse desde un cron interno o externo."""
+    if token != settings.master_admin_token:
+        raise HTTPException(status_code=401, detail="Token inválido")
     from app.whatsapp.client import send_template_message, send_text_message
     total_sent, total_failed, last_error = 0, 0, ""
     for company in crud.list_companies(db):
@@ -1200,9 +1202,11 @@ async def run_followups(db: Session = Depends(get_db)):
 
 
 @router.post("/tasks/run-reminders")
-async def run_reminders(db: Session = Depends(get_db)):
+async def run_reminders(token: str = Query(default=""), db: Session = Depends(get_db)):
     """Enviar recordatorios a clientes que dijeron que volverían y no lo hicieron,
     para TODAS las empresas."""
+    if token != settings.master_admin_token:
+        raise HTTPException(status_code=401, detail="Token inválido")
     from app.whatsapp.client import send_template_message, send_text_message
     pendientes = crud.due_reminders(db)
     sent, failed, last_error = 0, 0, ""
