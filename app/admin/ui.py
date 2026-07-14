@@ -1,13 +1,15 @@
 """
-Panel administrativo de Vita Qualitat — SPA (Single Page Application).
-Se sirve desde /admin/panel y consume los endpoints JSON del router.
-Diseño dark inspirado en las maquetas (WhatsBot style).
-El token se inyecta reemplazando __TOKEN__ para evitar el escape de llaves.
+Panel administrativo del bot — SPA (Single Page Application), reutilizable por
+cualquier empresa del SaaS. Se sirve desde /admin/panel y consume los endpoints
+JSON del router. El token y el nombre de la empresa se inyectan reemplazando
+__TOKEN__ / __COMPANY_NAME__ para evitar el escape de llaves.
 """
 
 
-def render_panel(token: str) -> str:
-    return _PANEL_HTML.replace("__TOKEN__", token)
+def render_panel(token: str, company_name: str = "VitaBot") -> str:
+    return (_PANEL_HTML
+            .replace("__TOKEN__", token)
+            .replace("__COMPANY_NAME__", company_name))
 
 
 _PANEL_HTML = r"""<!DOCTYPE html>
@@ -15,7 +17,7 @@ _PANEL_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Vita Qualitat — Panel</title>
+<title>__COMPANY_NAME__ — Panel</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiNmZmZmZmYiLz48dGV4dCB4PSIzMiIgeT0iNDciIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCZhcG9zO1RpbWVzIE5ldyBSb21hbiZhcG9zOyxzZXJpZiIgZm9udC1zaXplPSI0OCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdhYzA0MyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UTwvdGV4dD48L3N2Zz4=">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -347,9 +349,9 @@ _PANEL_HTML = r"""<!DOCTYPE html>
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="brand">
-      <img class="brand-logo" alt="Vita Qualitat" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiNmZmZmZmYiLz48dGV4dCB4PSIzMiIgeT0iNDciIGZvbnQtZmFtaWx5PSJHZW9yZ2lhLCZhcG9zO1RpbWVzIE5ldyBSb21hbiZhcG9zOyxzZXJpZiIgZm9udC1zaXplPSI0OCIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzdhYzA0MyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UTwvdGV4dD48L3N2Zz4=">
+      <div class="brand-logo" id="brand-logo" style="display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#7c3aed;background:#fff;border-radius:12px">•</div>
       <div>
-        <div class="brand-name">Vita <span>Qualitat</span></div>
+        <div class="brand-name" id="brand-name">__COMPANY_NAME__</div>
         <div class="brand-sub">Panel Administrativo</div>
       </div>
     </div>
@@ -366,8 +368,6 @@ _PANEL_HTML = r"""<!DOCTYPE html>
       <div class="nav-item" data-view="respuestas"><span class="nav-ico">⚡</span> Respuestas Rápidas</div>
       <div class="nav-item" data-view="etiquetas"><span class="nav-ico">🏷️</span> Etiquetas</div>
       <div class="nav-item" data-view="campanas"><span class="nav-ico">📣</span> Campañas</div>
-      <div class="nav-item" data-view="guias"><span class="nav-ico">🚚</span> Guías transportadoras</div>
-      <div class="nav-item" data-view="contactos"><span class="nav-ico">🤝</span> Proveedores</div>
       <div class="nav-item" data-view="ayuda"><span class="nav-ico">❓</span> Ayuda</div>
     </nav>
   </aside>
@@ -412,10 +412,12 @@ _PANEL_HTML = r"""<!DOCTYPE html>
 
 <script>
 const TOKEN='__TOKEN__';
+const COMPANY_NAME='__COMPANY_NAME__';
 const API='/admin';
 let S={view:'dashboard',convId:null,filter:'all',convs:[],lastTs:null,custName:'',custPhone:''};
 
 const $=s=>document.querySelector(s);
+(function(){const lg=$('#brand-logo');if(lg)lg.textContent=(COMPANY_NAME||'?').trim().charAt(0).toUpperCase()||'?';})();
 const initials=n=>!n?'?':n.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
 const money=n=>'$'+(n||0).toLocaleString('es-CO');
 function timeAgo(iso){if(!iso)return'';const d=(Date.now()-new Date(iso))/1000;if(d<60)return'ahora';if(d<3600)return Math.floor(d/60)+' min';if(d<86400)return Math.floor(d/3600)+' h';return Math.floor(d/86400)+' d';}
@@ -445,8 +447,6 @@ function showView(v){
   else if(v==='clientes'){topbarClientes();renderClientes();}
   else if(v==='etiquetas'){topbarSimple('🏷️ Etiquetas','Organiza tus clientes con etiquetas');renderEtiquetas();}
   else if(v==='campanas'){topbarSimple('📣 Campañas','Marketing por email y WhatsApp');renderCampanas();}
-  else if(v==='guias'){topbarSimple('🚚 Guías de transportadoras','Links y números de guía para rastrear pedidos');renderGuias();}
-  else if(v==='contactos'){topbarSimple('🤝 Proveedores y distribuidores','Tus contactos por tipo');renderContactos();}
   else if(v==='masvendidos'){topbarSimple('📈 Más vendidos','Productos más vendidos y métricas');renderTopProducts();}
   else if(v==='multimedia'){topbarSimple('📸 Multimedia','Fotos y videos de cada producto (el bot y tú los envían al cliente)');renderMultimedia();}
   else if(v==='segmentos'){topbarSimple('🎗️ Segmentación','Clientes clasificados por tipo de piel/necesidad');renderSegmentos();}
@@ -975,8 +975,6 @@ async function renderClientes(){
       <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px;line-height:1.55">Estas acciones son <b>irreversibles</b> y piden una clave de seguridad. Borran datos reales, no la configuración (cuentas, catálogo, entrenamiento se conservan).</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="qbtn" style="color:#f87171;border-color:#7f1d1d" onclick="resetAll()">🗑️ Borrar TODOS los clientes y ventas</button>
-        <button class="qbtn" onclick="clearCat('guias')">Borrar guías</button>
-        <button class="qbtn" onclick="clearCat('contactos')">Borrar proveedores/contactos</button>
         <button class="qbtn" onclick="clearCat('cupones')">Borrar cupones</button>
       </div>
       <p style="color:var(--muted2);font-size:11px;margin-top:10px">🔒 Los comprobantes de pago NUNCA se pueden borrar (quedan archivados de forma permanente).</p>
@@ -1074,14 +1072,14 @@ function showInfoModal(title,html){
 /* ─── EXCEL ─── */
 function renderExcel(){
   $('#view').innerHTML=`<div class="card" style="max-width:520px"><div class="card-h">📊 Reporte de Clientes</div>
-    <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:18px">Descarga un Excel con toda la información de clientes e historial de compras. También se envía a vitaqualitat@gmail.com.</p>
+    <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:18px">Descarga un Excel con toda la información de clientes e historial de compras. También se envía a tu correo de notificaciones.</p>
     <button class="act-btn p" style="justify-content:center" onclick="downloadExcel()">📥 Descargar Excel</button></div>`;
 }
 async function downloadExcel(){
   toast('Generando Excel…');
   try{const r=await fetch(API+'/api/customers/export?token='+TOKEN);if(!r.ok)throw new Error('Error');
     const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');
-    a.href=url;a.download='clientes_vita_qualitat_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+    a.href=url;a.download='clientes_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
     toast('✅ Excel descargado');}catch(e){toast('Error descargando Excel');}
 }
 
@@ -1101,7 +1099,7 @@ async function renderCampanas(){
           <option value="whatsapp_template">📄 WhatsApp Plantilla (llega siempre)</option>
         </select></div>
       <div id="cm-tpl-wrap" style="margin-bottom:12px;display:none"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Nombre de la plantilla aprobada de Meta</div>
-        <input class="search" id="cm-tpl" style="width:100%" value="${(promo.template_name||'').replace(/"/g,'&quot;')}" placeholder="Ej: promo_vitaqualitat">
+        <input class="search" id="cm-tpl" style="width:100%" value="${(promo.template_name||'').replace(/"/g,'&quot;')}" placeholder="Ej: promo_novedades"
         <p style="font-size:11px;color:var(--muted);margin-top:6px">La variable {{1}} de la plantilla se reemplaza con el nombre del cliente (en negrilla). Edita el texto de promoción en ⚙️ Configuración.</p></div>
       <div style="margin-bottom:12px"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Audiencia</div>
         <select id="cm-seg" class="search" style="width:280px" onchange="updAud()">
@@ -1109,7 +1107,7 @@ async function renderCampanas(){
         </select>
         <div id="cm-count" style="font-size:12px;color:var(--muted);margin-top:6px"></div></div>
       <div id="cm-subj-wrap" style="margin-bottom:12px"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Asunto (email)</div>
-        <input class="search" id="cm-subj" style="width:100%" placeholder="Novedades de Vita Qualitat 🌿"></div>
+        <input class="search" id="cm-subj" style="width:100%" placeholder="Tenemos novedades para ti 🌿"></div>
       <div style="margin-bottom:14px"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Mensaje (puedes usar {nombre})</div>
         <textarea class="cinput" id="cm-body" rows="5" style="width:100%;border-radius:10px">${(promo.message||'').replace(/</g,'&lt;')}</textarea></div>
       <button class="act-btn p" style="max-width:240px;justify-content:center" onclick="sendCampaign()">Enviar campaña</button>
@@ -1140,128 +1138,6 @@ async function sendCampaign(){
 
 /* ─── GUÍAS DE TRANSPORTADORAS ─── */
 // Página de rastreo por transportadora ({G} = número de guía si la soporta en la URL)
-const CARRIERS={
-  'Coordinadora':'https://www.coordinadora.com/rastreo/rastreo-de-guia/detalle-de-guia/?guia={G}',
-  'Servientrega':'https://www.servientrega.com/wps/portal/rastreo-envio',
-  'Interrapidísimo':'https://www.interrapidisimo.com/sigue-tu-envio/',
-  'Envía':'https://envia.co/rastrear-envios',
-  'TCC':'https://www.tcc.com.co/',
-  'Deprisa':'https://www.deprisa.com/'
-};
-async function renderGuias(){
-  $('#view').innerHTML='<div class="empty">Cargando…</div>';
-  let gs=[],cfg={};try{[gs,cfg]=await Promise.all([api('/api/guides'),api('/api/guides-config')]);}catch(e){}
-  if(S.view!=='guias')return;
-  const webhookUrl=location.origin+'/webhook/skydropx?token='+(cfg.webhook_secret||'');
-  $('#view').innerHTML=`
-    <div class="card" style="max-width:680px;margin-bottom:18px">
-      <div class="card-h">🔗 Conexión con Skydropx</div>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:10px;line-height:1.55">Pega esta URL en Skydropx (Configuración → Webhooks / Notificaciones) para que las guías que generes lleguen <b>solas</b> a este panel, con el cliente ya emparejado.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input class="search" id="wh-url" readonly value="${webhookUrl}" style="flex:1;min-width:220px;font-size:12px">
-        <button class="qbtn" onclick="copyWebhook()">📋 Copiar</button>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;cursor:pointer">
-        <input type="checkbox" id="g-autosend" ${cfg.autosend?'checked':''} style="width:18px;height:18px;accent-color:var(--pri)" onchange="saveGuidesAutosend()">
-        Enviar la guía al cliente automáticamente apenas llegue
-      </label>
-      <p style="font-size:11px;color:var(--muted2);margin-top:6px">Si lo dejas apagado, las guías llegan al panel y tú decides cuándo enviarlas con el botón “Enviar”.</p>
-    </div>
-    <div class="card" style="max-width:680px">
-      <div class="card-h">🚚 Guías</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Transportadora</div>
-          <select class="search" id="g-carrier" style="width:180px">${Object.keys(CARRIERS).map(c=>`<option>${c}</option>`).join('')}</select></div>
-        <div style="flex:1"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">N° de guía (manual)</div><input class="search" id="g-num" style="width:100%" placeholder="Ej: 123456789"></div>
-        <button class="act-btn p" style="padding:9px 16px" onclick="createGuide()">Agregar</button>
-      </div>
-      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Transportadora</th><th>N° de guía</th><th></th><th></th><th></th></tr></thead>
-        <tbody>${gs.length?gs.map(guideRow).join(''):'<tr><td colspan=7 class="empty">Sin guías</td></tr>'}</tbody></table></div>
-    </div>`;
-}
-function copyWebhook(){const i=$('#wh-url');if(i&&navigator.clipboard){navigator.clipboard.writeText(i.value).then(()=>toast('✅ URL copiada')).catch(()=>{});}}
-async function saveGuidesAutosend(){
-  const autosend=$('#g-autosend').checked;
-  try{await api('/api/guides-config',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({autosend})});toast(autosend?'✅ Envío automático activado':'Envío automático desactivado');}
-  catch(e){toast('Error: '+e.message);}
-}
-async function sendGuide(id){
-  if(!confirm('¿Enviar esta guía al cliente por WhatsApp?'))return;
-  try{await api('/api/guides/'+id+'/send',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN}});toast('✅ Guía enviada al cliente');}
-  catch(e){toast('Error: '+e.message);}
-}
-// 17track muestra el rastreo REAL y conectado de Coordinadora y demás transportadoras
-function trackUrl(carrier,guide){return guide?('https://t.17track.net/es#nums='+encodeURIComponent(guide)):'';}
-function carrierUrl(carrier,guide){const t=CARRIERS[carrier]||'';return t?t.replace('{G}',encodeURIComponent(guide||'')):'';}
-function guideRow(g){
-  const url=trackUrl(g.carrier,g.guide_number)||g.tracking_link||'';
-  const cliente=g.customer_name||(g.customer_phone?('+'+g.customer_phone):'—');
-  const canSend=!!g.customer_phone;
-  const dl=g.label_url?`<button class="qbtn" style="padding:6px 10px" onclick="window.open('${g.label_url}','_blank')">⬇️ PDF</button>`:'';
-  return `<tr><td>${g.date}</td><td>${cliente}</td><td><b>${g.carrier||'—'}</b></td><td>${g.guide_number||'—'}</td>
-  <td>${url?`<button class="act-btn p" style="padding:6px 12px" onclick="rastrear('${url}','${(g.guide_number||'').replace(/'/g,'')}')">📦 Rastrear</button>`:'—'} ${dl}</td>
-  <td>${canSend?`<button class="act-btn g" style="padding:6px 12px" onclick="sendGuide(${g.id})">📤 Enviar</button>`:'<span style="font-size:11px;color:var(--muted2)">sin tel.</span>'}</td>
-  <td><button class="qbtn" style="padding:5px 9px" onclick="delGuide(${g.id})">🗑️</button></td></tr>`;}
-function rastrear(url,guide){
-  // Copia el número de guía por si la página pide pegarlo, y abre el rastreo
-  if(guide&&navigator.clipboard){navigator.clipboard.writeText(guide).catch(()=>{});}
-  window.open(url,'_blank');
-}
-async function createGuide(){
-  const carrier=$('#g-carrier').value, guide=$('#g-num').value.trim();
-  if(!guide){toast('Pon el número de guía');return;}
-  const body={carrier,guide_number:guide,tracking_link:trackUrl(carrier,guide)};
-  try{await api('/api/guides',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify(body)});toast('✅ Guía agregada');renderGuias();}
-  catch(e){toast('Error: '+e.message);}
-}
-async function delGuide(id){try{await api('/api/guides/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}});renderGuias();}catch(e){toast('Error');}}
-
-/* ─── PROVEEDORES / DISTRIBUIDORES ─── */
-async function renderContactos(){
-  $('#view').innerHTML='<div class="empty">Cargando…</div>';
-  let cs=[];try{cs=await api('/api/contacts');}catch(e){}
-  if(S.view!=='contactos')return;
-  const prov=cs.filter(c=>c.kind==='proveedor'),dist=cs.filter(c=>c.kind==='distribuidor');
-  $('#view').innerHTML=`
-    <div class="card" style="max-width:900px;margin-bottom:18px">
-      <div class="card-h">🤝 Nuevo contacto</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Tipo</div>
-          <select class="search" id="ct-kind" style="width:150px"><option value="proveedor">Proveedor</option><option value="distribuidor">Distribuidor</option></select></div>
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Nombre</div><input class="search" id="ct-name" style="width:150px"></div>
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Empresa</div><input class="search" id="ct-company" style="width:150px"></div>
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teléfono</div><input class="search" id="ct-phone" style="width:130px"></div>
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Correo</div><input class="search" id="ct-email" style="width:170px"></div>
-        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Ciudad</div><input class="search" id="ct-city" style="width:120px"></div>
-        <button class="act-btn p" style="padding:9px 16px" onclick="createContact()">Agregar</button>
-      </div>
-    </div>
-    <div class="two-col">
-      <div class="card"><div class="card-h">📦 Proveedores (${prov.length})</div>${prov.length?prov.map(contactRow).join(''):'<div class="empty">Sin proveedores</div>'}</div>
-      <div class="card"><div class="card-h">🚛 Distribuidores (${dist.length})</div>${dist.length?dist.map(contactRow).join(''):'<div class="empty">Sin distribuidores</div>'}</div>
-    </div>`;
-}
-function contactRow(c){
-  const ph=(c.phone||'').replace(/[^\d]/g,'');
-  const chat=ph?`<button class="qbtn" style="padding:5px 9px" title="Chatear en el panel" onclick="openContactChat(${c.id})">💬 Chat</button>`:'';
-  const call=ph?`<a class="qbtn" style="padding:5px 9px;text-decoration:none" href="tel:+${ph}" title="Llamar">📞</a>`:'';
-  return `<div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
-  <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${c.name||'—'} ${c.company?`<span style="color:var(--muted);font-weight:400">· ${c.company}</span>`:''}</div>
-  <div style="font-size:12px;color:var(--muted);margin-top:3px">${[c.phone,c.email,c.city].filter(Boolean).join(' · ')||'sin datos'}</div></div>
-  ${chat}${call}<button class="qbtn" style="padding:5px 9px" onclick="delContact(${c.id})">🗑️</button></div>`;}
-async function openContactChat(id){
-  try{const r=await api('/api/contacts/'+id+'/chat',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN}});
-    setActiveNav('chat');location.hash='chat/'+r.conversation_id;showView('chat');setTimeout(()=>openConv(r.conversation_id),350);}
-  catch(e){toast('Error: '+e.message);}
-}
-async function createContact(){
-  const body={kind:$('#ct-kind').value,name:$('#ct-name').value.trim(),company:$('#ct-company').value.trim(),phone:$('#ct-phone').value.trim(),email:$('#ct-email').value.trim(),city:$('#ct-city').value.trim()};
-  if(!body.name){toast('Pon un nombre');return;}
-  try{await api('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify(body)});toast('✅ Contacto agregado');renderContactos();}
-  catch(e){toast('Error: '+e.message);}
-}
-async function delContact(id){try{await api('/api/contacts/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}});renderContactos();}catch(e){toast('Error');}}
-
 /* ─── MÁS VENDIDOS ─── */
 async function renderTopProducts(){
   $('#view').innerHTML='<div class="empty">Cargando…</div>';
@@ -1461,9 +1337,14 @@ function renderAyuda(){
   const item=(t,d)=>`<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="font-weight:700;font-size:14px;margin-bottom:4px">${t}</div><div style="font-size:13px;color:var(--muted);line-height:1.6">${d}</div></div>`;
   $('#view').innerHTML=`
     <div class="card" style="max-width:820px;margin-bottom:18px;border:1px solid var(--pri)">
-      <div class="card-h">🧪 Simulación del bot</div>
-      <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Carga una conversación completa de ejemplo (un cliente <b>oncológico</b> que hace y cierra su compra) para ver cómo trabaja el bot: segmentación, datos del cliente, pedido itemizado y venta registrada. Aparecerá en Conversaciones, Datos de Clientes, Segmentación y Más vendidos.</p>
-      <button class="act-btn p" style="max-width:320px;justify-content:center" onclick="cargarDemo()">🧪 Cargar conversación de demostración</button>
+      <div class="card-h">🧪 Chat de prueba con TU bot</div>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Prueba el bot exactamente como lo verá un cliente real (usa tu catálogo y tu Entrenamiento actual), sin gastar mensajes de WhatsApp ni tocar tus datos reales.</p>
+      <div id="test-chat-msgs" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input class="search" id="test-chat-input" style="flex:1" placeholder="Escribe como si fueras un cliente…" onkeydown="if(event.key==='Enter')testChatSend()">
+        <button class="act-btn p" style="max-width:120px;justify-content:center" onclick="testChatSend()">Enviar</button>
+        <button class="qbtn" onclick="testChatReset()">🔄 Reiniciar</button>
+      </div>
     </div>
     <div class="card" style="max-width:820px;margin-bottom:18px">
       <div class="card-h">🤖 Asistente de ayuda <span style="font-size:11px;color:var(--muted);font-weight:400">· resuelve tus dudas sobre el panel</span></div>
@@ -1482,25 +1363,31 @@ function renderAyuda(){
       ${item('🏠 Dashboard','Resumen en vivo: conversaciones, ventas del día/mes, ticket promedio, clientes nuevos y recurrentes, conversión de la IA. Se actualiza solo.')}
       ${item('💬 Conversaciones (Chat en vivo)','Lista de chats con filtros (Todas, No leídas, IA, Humanas). Abre un chat para ver los mensajes. Con el botón <b>IA / Humano</b> tomas el control o se lo devuelves al bot. En modo Humano puedes escribir, enviar imágenes, productos guardados, audios, QR de pago y plantillas. A la derecha ves los datos del cliente, sus etiquetas y acciones rápidas.')}
       ${item('🗄️ Datos de Clientes','Todos los clientes con cédula, correo, dirección, última compra, total gastado y # de compras. El botón <b>👁️ Ver</b> muestra qué productos y cuántas unidades ha comprado cada cliente. Botón <b>Exportar a Excel</b> arriba.')}
-      ${item('🏷️ Etiquetas','Clasifica clientes (VIP, Oncológico, Mayorista…). Se agregan desde el panel derecho de cada chat.')}
+      ${item('🏷️ Etiquetas','Clasifica clientes (VIP, recurrente, etc). Se agregan desde el panel derecho de cada chat.')}
       ${item('📣 Campañas','Envía mensajes masivos por <b>email</b> o <b>WhatsApp</b> a un segmento (todos, con compra, sin compra, recurrentes). WhatsApp solo entrega a clientes que escribieron en las últimas 24h, salvo plantillas aprobadas por Meta.')}
-      ${item('🚚 Guías de transportadoras','Registra el número de guía y link de rastreo de cada pedido para hacerle seguimiento.')}
-      ${item('🤝 Proveedores y distribuidores','Tu agenda de contactos separada por tipo.')}
-      ${item('⚙️ Configuración','Cuentas de pago / Bre-B, cupones y descuentos, precios y stock de productos, fotos y videos de cada producto, postventa y reseñas, y respuestas de voz (ElevenLabs).')}
-      ${item('🤖 Sobre el bot','Atiende solo, reconoce comprobantes (valida monto y fecha), arma pedidos, envía el QR Bre-B con el valor exacto, manda fotos de productos y videos de uso, y responde con voz cuando el cliente lo pide.')}
-      ${item('📱 Usar el panel en el celular','Abre este mismo link en el navegador del celular (Chrome en Android, Safari en iPhone). Verás una versión móvil con las categorías esenciales para monitorear y atender. Para tenerlo como app: <b>Android</b> → menú ⋮ → "Agregar a pantalla de inicio" / "Instalar app". <b>iPhone</b> → botón Compartir ⬆️ → "Agregar a inicio". Queda como un ícono (la Q verde) y se abre como aplicación. Puedes usarlo en varios dispositivos a la vez sin problema.')}
+      ${item('⚙️ Configuración','Cuentas de pago, cupones y descuentos, precios y stock de productos, fotos y videos de cada producto, postventa y reseñas, y respuestas de voz (ElevenLabs).')}
+      ${item('📱 Usar el panel en el celular','Abre este mismo link en el navegador del celular (Chrome en Android, Safari en iPhone). Para tenerlo como app: <b>Android</b> → menú ⋮ → "Agregar a pantalla de inicio". <b>iPhone</b> → botón Compartir ⬆️ → "Agregar a inicio".')}
     </div>`;
   helpRender();
+  testChatRender();
 }
-async function cargarDemo(){
-  if(!confirm('Se cargará una conversación de ejemplo (cliente oncológico) en el panel para ver cómo trabaja el bot. ¿Continuar?'))return;
-  toast('Cargando simulación…');
-  try{
-    const r=await api('/api/demo/oncologico',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN}});
-    toast('✅ Demo cargada: '+r.customer+' · '+money(r.order_total));
-    setActiveNav('chat');location.hash='chat/'+r.conversation_id;showView('chat');
-    setTimeout(()=>openConv(r.conversation_id),350);
-  }catch(e){toast('Error: '+e.message);}
+if(!window.S)window.S={};
+async function testChatSend(){
+  const inp=$('#test-chat-input');const text=inp.value.trim();if(!text)return;
+  if(!S.testChat)S.testChat=[];
+  S.testChat.push({role:'user',content:text});inp.value='';testChatRender();
+  S.testChat.push({role:'assistant',content:'…'});testChatRender();
+  try{const r=await api('/api/test-chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({messages:S.testChat.slice(0,-1)})});
+    S.testChat[S.testChat.length-1]={role:'assistant',content:r.reply||'(sin respuesta)'};
+  }catch(e){S.testChat[S.testChat.length-1]={role:'assistant',content:'⚠️ No pude responder: '+e.message};}
+  testChatRender();
+}
+function testChatReset(){S.testChat=[];testChatRender();}
+function testChatRender(){
+  const box=$('#test-chat-msgs');if(!box)return;
+  if(!S.testChat)S.testChat=[];
+  box.innerHTML=S.testChat.map(m=>`<div style="align-self:${m.role==='user'?'flex-end':'flex-start'};max-width:80%;background:${m.role==='user'?'var(--pri)':'var(--panel2)'};color:${m.role==='user'?'#fff':'var(--text)'};padding:8px 12px;border-radius:10px;font-size:13px;white-space:pre-wrap">${m.content}</div>`).join('')||'<div style="color:var(--muted2);font-size:12px">Escribe abajo como si fueras un cliente para probar el bot.</div>';
+  box.scrollTop=box.scrollHeight;
 }
 function helpRender(){
   const box=$('#help-msgs');if(!box)return;
@@ -1603,8 +1490,8 @@ async function renderConfig(){
     </div>
     <div class="card" style="max-width:760px;margin-bottom:18px">
       <div class="card-h">🤖 Nombre del bot <button class="qbtn" onclick="saveBotName()">💾 Guardar</button></div>
-      <p style="color:var(--muted);font-size:12.5px;margin-bottom:10px">Así se presentará el bot con tus clientes. Ej: "¡Hola! Soy ${(botn.name||'Vita')}, de Vita Qualitat 🌿".</p>
-      <input class="search" id="bot-name" style="width:280px" value="${(botn.name||'Vita').replace(/"/g,'&quot;')}" placeholder="Vita">
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:10px">Así se presentará el bot con tus clientes. Ej: "¡Hola! Soy ${(botn.name||'Asistente')}, de ${COMPANY_NAME} 🌿".</p>
+      <input class="search" id="bot-name" style="width:280px" value="${(botn.name||'Asistente').replace(/"/g,'&quot;')}" placeholder="Asistente">
     </div>
     <div class="card" style="max-width:760px;margin-bottom:18px">
       <div class="card-h">🎓 Entrenamiento del bot <button class="qbtn" onclick="saveTraining()">💾 Guardar</button></div>
@@ -1635,10 +1522,17 @@ async function renderConfig(){
     </div>
 
     <div class="card" style="max-width:760px;margin-bottom:18px">
-      <div class="card-h">🏷️ Productos y precios <button class="qbtn" onclick="saveCatalog()">💾 Guardar</button></div>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Edita el precio y la disponibilidad de cada producto. El bot usará estos valores al hablar con los clientes.</p>
-      <div class="tbl-wrap"><table id="cat-tbl"><thead><tr><th>Producto</th><th>Precio (COP)</th><th>En stock</th></tr></thead>
-        <tbody>${cat.map(catRow).join('')}</tbody></table></div>
+      <div class="card-h">🏷️ Productos y precios <button class="qbtn" onclick="saveCatalog()">💾 Guardar precios/stock</button></div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Agrega tus productos/servicios y edita precio y disponibilidad. El bot usará estos valores al hablar con los clientes.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;padding:12px;border:1px solid var(--border);border-radius:10px">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">SKU</div><input class="search" id="np-sku" style="width:110px" placeholder="SKU-01"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Nombre</div><input class="search" id="np-name" style="width:180px" placeholder="Nombre del producto"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Precio (COP)</div><input class="search" id="np-price" type="number" style="width:120px" placeholder="50000"></div>
+        <div style="flex:1;min-width:160px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Descripción</div><input class="search" id="np-desc" style="width:100%" placeholder="Opcional"></div>
+        <button class="act-btn p" style="padding:9px 16px" onclick="addProduct()">+ Agregar</button>
+      </div>
+      <div class="tbl-wrap"><table id="cat-tbl"><thead><tr><th>Producto</th><th>Precio (COP)</th><th>En stock</th><th></th></tr></thead>
+        <tbody>${cat.map(catRow).join('')||'<tr><td colspan=4 class="empty">Aún no tienes productos. Agrega el primero arriba.</td></tr>'}</tbody></table></div>
     </div>`+`
     <div class="card" style="max-width:760px;margin-bottom:18px">
       <div class="card-h">📱 QR de pago y Excel</div>
@@ -1687,7 +1581,7 @@ async function renderConfig(){
       <div style="margin-bottom:12px"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Mensaje de promoción (texto libre, dentro de 24h)</div>
         <textarea class="cinput" id="promo-msg" rows="3" style="width:100%;border-radius:10px">${(promo.message||'').replace(/</g,'&lt;')}</textarea></div>
       <div><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Plantilla aprobada de Meta (para enviar después de las 24h)</div>
-        <input class="search" id="promo-template" style="width:100%" value="${(promo.template_name||'').replace(/"/g,'&quot;')}" placeholder="Ej: promo_vitaqualitat">
+        <input class="search" id="promo-template" style="width:100%" value="${(promo.template_name||'').replace(/"/g,'&quot;')}" placeholder="Ej: promo_novedades"
         <p style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">El texto de la plantilla está fijo en Meta; aquí defines cuál usar. El mensaje de arriba es el que se envía dentro de las 24h.</p></div>
     </div>
 
@@ -1748,12 +1642,27 @@ async function delCoupon(code){
   catch(e){toast('Error: '+e.message);}
 }
 function catRow(p){return `<tr data-sku="${p.sku}">
-  <td><b>${p.name}</b></td>
+  <td><b>${p.name}</b><div style="font-size:11px;color:var(--muted2)">${p.sku}</div></td>
   <td><input class="search ct-price" type="number" value="${p.price_cop}" style="width:130px"></td>
-  <td><input type="checkbox" class="ct-stock" ${p.in_stock?'checked':''} style="width:18px;height:18px;accent-color:var(--pri)"></td></tr>`;}
+  <td><input type="checkbox" class="ct-stock" ${p.in_stock?'checked':''} style="width:18px;height:18px;accent-color:var(--pri)"></td>
+  <td><button class="qbtn" style="padding:5px 9px" onclick="delProduct('${p.sku}')">🗑️</button></td></tr>`;}
+async function addProduct(){
+  const sku=$('#np-sku').value.trim(),name=$('#np-name').value.trim();
+  const price=parseInt($('#np-price').value)||0,description=$('#np-desc').value.trim();
+  if(!sku||!name){toast('Pon el SKU y el nombre');return;}
+  try{await api('/api/products',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({sku,name,price,description,in_stock:true})});
+    toast('✅ Producto agregado');$('#np-sku').value='';$('#np-name').value='';$('#np-price').value='';$('#np-desc').value='';
+    renderConfig();}
+  catch(e){toast('Error: '+e.message);}
+}
+async function delProduct(sku){
+  if(!confirm('¿Eliminar este producto? También se borrará su foto/video si los tiene.'))return;
+  try{await api('/api/products/'+encodeURIComponent(sku),{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}});toast('Producto eliminado');renderConfig();}
+  catch(e){toast('Error: '+e.message);}
+}
 async function saveCatalog(){
   const data={};
-  document.querySelectorAll('#cat-tbl tbody tr').forEach(tr=>{
+  document.querySelectorAll('#cat-tbl tbody tr[data-sku]').forEach(tr=>{
     data[tr.dataset.sku]={price_cop:parseInt(tr.querySelector('.ct-price').value)||0,in_stock:tr.querySelector('.ct-stock').checked};
   });
   try{await api('/api/catalog',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify(data)});toast('✅ Precios guardados');}
@@ -1837,7 +1746,7 @@ async function savePromo(){
   catch(e){toast('Error: '+e.message);}
 }
 async function saveBotName(){
-  const name=$('#bot-name').value.trim()||'Vita';
+  const name=$('#bot-name').value.trim()||'Asistente';
   try{await api('/api/bot-name',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({name})});toast('✅ Nombre guardado: '+name);}
   catch(e){toast('Error: '+e.message);}
 }
