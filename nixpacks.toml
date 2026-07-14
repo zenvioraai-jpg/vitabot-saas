@@ -1,0 +1,4 @@
+# Instala ffmpeg en el contenedor para convertir audios (webm -> ogg/opus)
+# a un formato que WhatsApp acepta como nota de voz.
+[phases.setup]
+aptPkgs = ["ffmpeg"]
