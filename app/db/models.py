@@ -15,6 +15,7 @@ class Company(Base):
     business_type: Mapped[str] = mapped_column(String, default="otro")
     whatsapp_phone_number_id: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     whatsapp_access_token: Mapped[str] = mapped_column(Text, nullable=False)
+    is_test_number: Mapped[bool] = mapped_column(default=True)  # numero de prueba de Meta vs numero real de produccion
     webhook_verify_token: Mapped[str] = mapped_column(String, default="")
     admin_token: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
     notification_email: Mapped[str | None] = mapped_column(String)

@@ -299,19 +299,28 @@ async function renderEmpresas(){
       <details>
         <summary>2️⃣ Cómo conseguir el número de WhatsApp y las credenciales en Meta</summary>
         <div class="guide-body">
-          <p>Esto se hace UNA vez por cada empresa nueva, en la cuenta de Meta de esa empresa.</p>
+          <p>Esto se hace UNA vez por cada empresa nueva, en la cuenta de Meta de esa empresa. Empieza SIEMPRE con la Opción A (gratis) para probar el bot antes de conectar el número real.</p>
           <ol>
             <li>Crea (o usa) una cuenta de <b>Meta Business</b> en <code>business.facebook.com</code>.</li>
             <li>Ve a <code>developers.facebook.com/apps</code> → <b>Crear app</b> → tipo <b>"Otro"</b> → <b>"Empresa"</b>.</li>
             <li>Agrega el producto <b>WhatsApp</b> a la app.</li>
-            <li>En <b>WhatsApp → Configuración de la API</b> verás un número de prueba y un token temporal (24h).</li>
-            <li>Para producción: agrega el número real de la empresa y verifícalo por SMS/llamada.</li>
-            <li><b>Token permanente</b>: Configuración del negocio → Usuarios del sistema → Agregar → asigna la app de WhatsApp → genera token con permisos <code>whatsapp_business_messaging</code> + <code>whatsapp_business_management</code>, sin expiración.</li>
-            <li>Copia el <b>phone_number_id</b> desde Configuración de la API.</li>
-            <li>Configura el <b>Webhook</b>: URL <code>https://TU-DOMINIO/webhook</code>, token de verificación (el que pongas en el servidor), suscríbete a <b>messages</b>.</li>
-            <li>Pega phone_number_id y access_token al crear/editar la empresa aquí.</li>
           </ol>
-          <div class="tip">💡 Todas las empresas comparten la MISMA url de webhook — el sistema identifica sola a cada una por su phone_number_id.</div>
+          <p><b>🧪 Opción A — Número de PRUEBA (gratis, recomendado para empezar):</b></p>
+          <ol>
+            <li>En <b>WhatsApp → Configuración de la API</b>, Meta ya te da un <b>número de prueba gratis</b> con un <b>token temporal</b> (dura 24h, lo regeneras cuando quieras desde la misma pantalla).</li>
+            <li>En la sección <b>"Para: Números de teléfono"</b>, agrega tu propio celular como <b>destinatario autorizado</b> (Meta te envía un código para verificarlo).</li>
+            <li>Copia el <b>phone_number_id</b> y el <b>token temporal</b> — pégalos aquí marcando <b>"Es un número de prueba"</b> al crear la empresa.</li>
+            <li>Escríbele por WhatsApp a ese número de prueba desde tu celular ya autorizado, y verás responder al bot con lo que hayas puesto en Entrenamiento.</li>
+          </ol>
+          <p><b>✅ Opción B — Número REAL de producción (cuando ya vayas a lanzar con clientes reales):</b></p>
+          <ol>
+            <li>En <b>Administrador de WhatsApp Business</b>, agrega el número real de la empresa (no puede estar ya activo en la app normal de WhatsApp) y verifícalo por SMS/llamada.</li>
+            <li><b>Token permanente</b>: Configuración del negocio → Usuarios del sistema → Agregar → asigna la app de WhatsApp → genera token con permisos <code>whatsapp_business_messaging</code> + <code>whatsapp_business_management</code>, sin expiración.</li>
+            <li>Copia el <b>phone_number_id</b> real desde Configuración de la API.</li>
+            <li>Edita la empresa aquí, pega las nuevas credenciales y <b>desmarca "Es un número de prueba"</b>.</li>
+          </ol>
+          <p><b>Para ambas opciones</b>, configura el <b>Webhook</b> en la misma pantalla de Meta: URL <code>https://TU-DOMINIO/webhook</code>, token de verificación (el que pongas en el servidor), suscríbete a <b>messages</b>.</p>
+          <div class="tip">💡 Todas las empresas comparten la MISMA url de webhook — el sistema identifica sola a cada una por su phone_number_id. No importa si es número de prueba o real, el webhook es igual.</div>
         </div>
       </details>
       <details>
@@ -340,7 +349,11 @@ async function renderEmpresas(){
         <div class="field"><label>Correo de notificaciones</label><input id="nc-email" style="width:190px" placeholder="dueno@empresa.com"></div>
         <button class="btn btn-p" onclick="createCompany()">Crear empresa</button>
       </div>
-      <p style="font-size:11.5px;color:#94a3b8">Si aún no tienes el número de WhatsApp conectado, puedes crearla igual y completar esos datos después.</p>
+      <label style="display:flex;align-items:center;gap:8px;margin:6px 0 10px;font-size:12.5px;color:#334155;cursor:pointer">
+        <input type="checkbox" id="nc-test" checked style="width:16px;height:16px;accent-color:#2563eb">
+        🧪 Es un número de PRUEBA (recomendado) — así puedes probar el bot con todo lo que entrenaste antes de usarlo con clientes reales
+      </label>
+      <p style="font-size:11.5px;color:#94a3b8">Si aún no tienes el número de WhatsApp conectado, puedes crearla igual y completar esos datos después (ver Guía, sección 2).</p>
     </div>
 
     <div class="card">
@@ -351,12 +364,18 @@ async function renderEmpresas(){
   loadCompanies();
 }
 
+function numberBadge(c){
+  return c.is_test_number
+    ? '<span class="badge onboarding">🧪 Prueba</span>'
+    : '<span class="badge active">✅ Producción</span>';
+}
 function companyRow(c){
   const panelUrl=location.origin+'/admin/panel?token='+c.admin_token;
   return `<tr>
     <td><span class="avatar-sm">${initials(c.name)}</span><b>${c.name}</b><div style="font-size:11px;color:#94a3b8;margin-left:38px">${c.slug}</div></td>
     <td>${c.business_type}</td>
     <td>${statusBadge(c.status)}</td>
+    <td>${numberBadge(c)}</td>
     <td>${c.conversations}</td>
     <td>${c.messages_today}</td>
     <td>${c.last_activity?timeAgo(c.last_activity):'—'}</td>
@@ -367,11 +386,15 @@ function companyRow(c){
       ${c.status!=='paused'?`<button class="btn btn-s" onclick="setStatus(${c.id},'paused')">⏸️ Pausar</button>`:''}
     </td>
   </tr>
-  <tr id="edit-row-${c.id}" style="display:none"><td colspan="7">
+  <tr id="edit-row-${c.id}" style="display:none"><td colspan="8">
     <div class="row" style="padding:10px 0">
       <div class="field"><label>WhatsApp phone_number_id</label><input id="ed-phone-${c.id}" style="width:190px" value="${c.whatsapp_phone_number_id.startsWith('pendiente-')?'':c.whatsapp_phone_number_id}"></div>
       <div class="field"><label>WhatsApp access_token</label><input id="ed-token-${c.id}" style="width:220px" placeholder="(déjalo vacío para no cambiarlo)"></div>
       <div class="field"><label>Correo de notificaciones</label><input id="ed-email-${c.id}" style="width:190px" value="${c.notification_email}"></div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155;cursor:pointer">
+        <input type="checkbox" id="ed-test-${c.id}" ${c.is_test_number?'checked':''} style="width:16px;height:16px;accent-color:#2563eb">
+        🧪 Número de prueba
+      </label>
       <button class="btn btn-p" onclick="saveEdit(${c.id})">Guardar</button>
       <button class="btn btn-s" onclick="openEdit(${c.id})">Cancelar</button>
     </div>
@@ -385,6 +408,7 @@ async function saveEdit(id){
   const body={
     whatsapp_phone_number_id:$('#ed-phone-'+id).value.trim(),
     notification_email:$('#ed-email-'+id).value.trim(),
+    is_test_number:$('#ed-test-'+id).checked,
   };
   const tok=$('#ed-token-'+id).value.trim();
   if(tok)body.whatsapp_access_token=tok;
@@ -396,7 +420,7 @@ function renderEmpresasTable(){
   const cs=S._companies||[];
   if(!$('#companies'))return;
   if(!cs.length){$('#companies').innerHTML='<div class="empty">Sin resultados.</div>';return;}
-  $('#companies').innerHTML=`<table><thead><tr><th>Empresa</th><th>Tipo</th><th>Estado</th><th>Conversaciones</th><th>Msjs hoy</th><th>Última actividad</th><th></th></tr></thead>
+  $('#companies').innerHTML=`<table><thead><tr><th>Empresa</th><th>Tipo</th><th>Estado</th><th>Número</th><th>Conversaciones</th><th>Msjs hoy</th><th>Última actividad</th><th></th></tr></thead>
     <tbody>${cs.map(companyRow).join('')}</tbody></table>`;
 }
 async function loadCompanies(){
@@ -414,6 +438,7 @@ async function createCompany(){
     whatsapp_phone_number_id:$('#nc-phone').value.trim(),
     whatsapp_access_token:$('#nc-token').value.trim(),
     notification_email:$('#nc-email').value.trim(),
+    is_test_number:$('#nc-test').checked,
   };
   try{
     const r=await api('/api/companies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});

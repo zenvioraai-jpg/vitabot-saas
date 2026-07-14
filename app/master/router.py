@@ -61,7 +61,7 @@ def api_list_companies(token: str = Query(default=""), db: Session = Depends(get
         )
         out.append({
             "id": c.id, "name": c.name, "slug": c.slug, "business_type": c.business_type,
-            "status": c.status, "admin_token": c.admin_token,
+            "status": c.status, "admin_token": c.admin_token, "is_test_number": c.is_test_number,
             "whatsapp_phone_number_id": c.whatsapp_phone_number_id,
             "notification_email": c.notification_email or "",
             "messages_today": msgs_today, "conversations": convs, "customers": customers,
@@ -101,6 +101,7 @@ async def api_create_company(body: dict, token: str = Query(default=""),
         admin_token=secrets.token_urlsafe(18),
         notification_email=(body.get("notification_email") or "").strip(),
         status="onboarding",
+        is_test_number=bool(body.get("is_test_number", True)),
     )
     logger.info("Empresa creada: %s (id=%d, tipo=%s)", company.name, company.id, business_type)
     return {
@@ -133,6 +134,8 @@ async def api_update_company(company_id: int, body: dict, token: str = Query(def
                "webhook_verify_token", "notification_email", "business_type"):
         if key in body and body[key] is not None:
             fields[key] = body[key].strip() if isinstance(body[key], str) else body[key]
+    if "is_test_number" in body:
+        fields["is_test_number"] = bool(body["is_test_number"])
     company = crud.update_company(db, company_id, **fields)
     if not company:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
