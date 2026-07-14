@@ -3,7 +3,44 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db.models import (Company, Customer, Conversation, Message, AdvisorSession, BotSetting, Order,
                            CustomerTag, PaymentReceipt, Followup, Coupon, ShippingGuide, Contact,
-                           PaymentReceived, MediaBlob, Reminder, Product)
+                           PaymentReceived, MediaBlob, Reminder, Product, PlatformSetting)
+
+
+# ─── Configuración de PLATAFORMA (panel maestro, no ligada a una empresa) ──────
+
+def get_platform_setting(db: Session, key: str, default: str = "") -> str:
+    row = db.query(PlatformSetting).filter(PlatformSetting.key == key).first()
+    return row.value if row else default
+
+
+def set_platform_setting(db: Session, key: str, value: str) -> None:
+    row = db.query(PlatformSetting).filter(PlatformSetting.key == key).first()
+    if row:
+        row.value = value
+        row.updated_at = datetime.utcnow()
+    else:
+        db.add(PlatformSetting(key=key, value=value))
+    db.commit()
+
+
+def get_master_profile(db: Session) -> dict:
+    import json
+    raw = get_platform_setting(db, "master_profile", "")
+    if not raw:
+        return {"name": "Administrador", "photo_b64": ""}
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"name": "Administrador", "photo_b64": ""}
+
+
+def save_master_profile(db: Session, name: str, photo_b64: str | None = None) -> None:
+    import json
+    cur = get_master_profile(db)
+    cur["name"] = (name or "").strip() or "Administrador"
+    if photo_b64 is not None:
+        cur["photo_b64"] = photo_b64
+    set_platform_setting(db, "master_profile", json.dumps(cur, ensure_ascii=False))
 
 
 # ─── Companies (empresas / tenants) ────────────────────────────────────────────

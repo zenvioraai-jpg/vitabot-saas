@@ -139,6 +139,131 @@ async def api_update_company(company_id: int, body: dict, token: str = Query(def
     return {"status": "ok"}
 
 
+@router.get("/api/profile")
+def api_get_profile(token: str = Query(default=""), db: Session = Depends(get_db)):
+    _require_master(token)
+    return crud.get_master_profile(db)
+
+
+@router.post("/api/profile")
+async def api_save_profile(body: dict, token: str = Query(default=""),
+                           authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    _require_master(_auth(token, authorization))
+    crud.save_master_profile(db, body.get("name", ""), body.get("photo_b64"))
+    return {"status": "ok"}
+
+
+@router.get("/api/dashboard")
+def api_dashboard(token: str = Query(default=""), db: Session = Depends(get_db)):
+    """Resumen general para el Dashboard del panel maestro: metricas reales
+    agregadas de TODAS las empresas (nada de datos de ejemplo)."""
+    _require_master(token)
+    from datetime import timedelta
+    companies = crud.list_companies(db)
+    today = datetime.utcnow().date()
+    start_today = datetime.combine(today, datetime.min.time())
+
+    companies_active = sum(1 for c in companies if c.status == "active")
+    conversations_today = db.query(Conversation).filter(Conversation.created_at >= start_today).count()
+    total_contacts = db.query(Customer).count()
+
+    # Conversaciones por dia (ultimos 7 dias, todas las empresas)
+    dias = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    chart = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        next_day = day + timedelta(days=1)
+        count = (
+            db.query(Conversation)
+            .filter(Conversation.created_at >= datetime.combine(day, datetime.min.time()),
+                    Conversation.created_at < datetime.combine(next_day, datetime.min.time()))
+            .count()
+        )
+        chart.append({"label": dias[day.weekday()], "count": count})
+
+    # Rendimiento por empresa (top 6 por num. de conversaciones)
+    performance = []
+    for c in companies:
+        total = db.query(Conversation).filter(Conversation.company_id == c.id).count()
+        if total == 0:
+            continue
+        resolved = db.query(Conversation).filter(Conversation.company_id == c.id, Conversation.status == "resolved").count()
+        performance.append({
+            "name": c.name, "business_type": c.business_type,
+            "conversations": total,
+            "success_rate": round((resolved / total) * 100, 1) if total else 0.0,
+        })
+    performance.sort(key=lambda x: x["conversations"], reverse=True)
+    performance = performance[:6]
+
+    # Empresas recientes (para la tabla)
+    recent_companies = []
+    for c in sorted(companies, key=lambda x: x.created_at, reverse=True)[:5]:
+        convs_today = db.query(Conversation).filter(Conversation.company_id == c.id,
+                                                     Conversation.created_at >= start_today).count()
+        recent_companies.append({
+            "id": c.id, "name": c.name, "slug": c.slug, "status": c.status,
+            "conversations_today": convs_today,
+        })
+
+    # Actividad reciente: ultimas conversaciones iniciadas + empresas creadas
+    activity = []
+    company_names = {c.id: c.name for c in companies}
+    recent_convs = db.query(Conversation).order_by(Conversation.created_at.desc()).limit(6).all()
+    for conv in recent_convs:
+        activity.append({
+            "text": f"Nueva conversación en {company_names.get(conv.company_id, 'una empresa')}",
+            "detail": f"+{conv.phone_number}",
+            "at": conv.created_at.isoformat(),
+        })
+    for c in sorted(companies, key=lambda x: x.created_at, reverse=True)[:3]:
+        activity.append({
+            "text": "Nueva empresa agregada", "detail": c.name, "at": c.created_at.isoformat(),
+        })
+    activity.sort(key=lambda x: x["at"], reverse=True)
+    activity = activity[:8]
+
+    return {
+        "companies_active": companies_active,
+        "companies_total": len(companies),
+        "chatbots_active": companies_active,
+        "conversations_today": conversations_today,
+        "total_contacts": total_contacts,
+        "chart": chart,
+        "performance": performance,
+        "recent_companies": recent_companies,
+        "activity": activity,
+    }
+
+
+@router.get("/api/recent-conversations")
+def api_recent_conversations(token: str = Query(default=""), db: Session = Depends(get_db)):
+    """Conversaciones mas recientes de TODAS las empresas, con link directo al panel
+    de la empresa dueña para abrirla."""
+    _require_master(token)
+    companies = {c.id: c for c in crud.list_companies(db)}
+    convs = db.query(Conversation).order_by(Conversation.updated_at.desc()).limit(30).all()
+    out = []
+    for conv in convs:
+        company = companies.get(conv.company_id)
+        if not company:
+            continue
+        last_msg = (
+            db.query(Message)
+            .filter(Message.conversation_id == conv.id)
+            .order_by(Message.timestamp.desc())
+            .first()
+        )
+        out.append({
+            "id": conv.id, "company_name": company.name, "phone_number": conv.phone_number,
+            "mode": conv.mode, "status": conv.status,
+            "preview": (last_msg.content[:80] if last_msg else ""),
+            "updated_at": conv.updated_at.isoformat(),
+            "panel_url": f"/admin/panel?token={company.admin_token}#chat/{conv.id}",
+        })
+    return out
+
+
 @router.get("/panel", response_class=HTMLResponse)
 async def master_panel(token: str = Query(default="")):
     if not token or token != settings.master_admin_token:

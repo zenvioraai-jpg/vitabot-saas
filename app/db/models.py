@@ -26,6 +26,16 @@ class Company(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class PlatformSetting(Base):
+    """Key-value de PLATAFORMA (no de una empresa) — ej: nombre/foto del
+    administrador maestro del SaaS que se muestra en el panel maestro."""
+    __tablename__ = "platform_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Customer(Base):
     __tablename__ = "customers"
     __table_args__ = (
