@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.db.models import (Company, Customer, Conversation, Message, AdvisorSession, BotSetting, Order,
                            CustomerTag, PaymentReceipt, Followup, Coupon, ShippingGuide, Contact,
-                           PaymentReceived, MediaBlob, Reminder, Product, PlatformSetting)
+                           PaymentReceived, MediaBlob, Reminder, Product, PlatformSetting, Appointment)
 
 
 # ─── Configuración de PLATAFORMA (panel maestro, no ligada a una empresa) ──────
@@ -1201,3 +1201,55 @@ def list_segmented_customers(db: Session, company_id: int) -> dict:
             "city": c.city or "",
         })
     return {"segments": SEGMENTS, "groups": out}
+
+
+# ─── Citas / Reservas (agendadas por el bot o manualmente) ─────────────────────
+
+def create_appointment(
+    db: Session,
+    company_id: int,
+    scheduled_at: datetime,
+    customer_name: str | None = None,
+    customer_phone: str | None = None,
+    service: str | None = None,
+    notes: str | None = None,
+    source: str = "manual",
+    customer_id: int | None = None,
+    conversation_id: int | None = None,
+    status: str = "pending",
+) -> Appointment:
+    a = Appointment(
+        company_id=company_id, scheduled_at=scheduled_at, customer_name=customer_name,
+        customer_phone=customer_phone, service=service, notes=notes, source=source,
+        customer_id=customer_id, conversation_id=conversation_id, status=status,
+    )
+    db.add(a)
+    db.commit()
+    db.refresh(a)
+    return a
+
+
+def list_appointments(db: Session, company_id: int, upcoming_only: bool = False) -> list[Appointment]:
+    q = db.query(Appointment).filter(Appointment.company_id == company_id)
+    if upcoming_only:
+        q = q.filter(Appointment.scheduled_at >= datetime.utcnow(), Appointment.status != "cancelled")
+    return q.order_by(Appointment.scheduled_at.asc()).all()
+
+
+def set_appointment_status(db: Session, company_id: int, appointment_id: int, status: str) -> Appointment | None:
+    a = db.query(Appointment).filter(Appointment.id == appointment_id, Appointment.company_id == company_id).first()
+    if a:
+        a.status = status
+        db.commit()
+        db.refresh(a)
+    return a
+
+
+def delete_appointment(db: Session, company_id: int, appointment_id: int) -> bool:
+    n = (
+        db.query(Appointment)
+        .filter(Appointment.id == appointment_id, Appointment.company_id == company_id)
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    return n > 0

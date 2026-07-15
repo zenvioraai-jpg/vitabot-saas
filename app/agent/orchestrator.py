@@ -583,6 +583,35 @@ async def _process_ai_text(db, company_id: int, creds: WhatsAppCreds, conversati
         except Exception as exc:
             logger.error("No se pudo agendar recordatorio: %s", exc)
 
+    # ── Cita / reserva agendada por el bot ──────────────────────────────────────
+    cita_found, cita_value, ai_text = _extract_tag(ai_text, "CITA_AGENDADA")
+    if cita_found and cita_value:
+        try:
+            kv = _parse_kv(cita_value)
+            fecha = (kv.get('fecha') or '').strip()
+            hora = (kv.get('hora') or '').strip()
+            scheduled_at = None
+            if fecha and hora:
+                try:
+                    scheduled_at = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+                except ValueError:
+                    scheduled_at = None
+            notes = kv.get('notas') or ""
+            if not scheduled_at:
+                # No se pudo interpretar la fecha/hora: se guarda para revisión manual
+                # en vez de perder la cita, dejando en notas lo que dijo el cliente.
+                scheduled_at = datetime.utcnow()
+                notes = f"⚠️ Revisar fecha/hora (texto original: fecha={fecha!r} hora={hora!r}). {notes}".strip()
+            crud.create_appointment(
+                db, company_id=company_id, scheduled_at=scheduled_at,
+                customer_name=kv.get('nombre') or customer.name, customer_phone=customer.phone_number,
+                service=kv.get('servicio') or "", notes=notes, source="bot",
+                customer_id=customer.id, conversation_id=conversation.id, status="pending",
+            )
+            logger.info("Cita agendada por el bot para conv %d: %s", conversation.id, cita_value)
+        except Exception as exc:
+            logger.error("No se pudo agendar la cita: %s", exc)
+
     # ── QR ─────────────────────────────────────────────────────────────────────
     qr_found, _, ai_text = _extract_tag(ai_text, "ENVIAR_QR")
     if qr_found or auto_qr:
@@ -635,6 +664,7 @@ def _build_customer_prompt(db, company_id: int, customer, is_first_message: bool
     products = crud.list_products(db, company_id)
     return build_system_prompt(
         company_name=company.name if company else "",
+        business_type=company.business_type if company else "otro",
         products=[{"sku": p.sku, "name": p.name, "price": p.price, "description": p.description}
                  for p in products],
         customer_name=customer.name,

@@ -225,6 +225,8 @@ _PANEL_HTML = r"""<!DOCTYPE html>
   .tag.g{background:var(--g-bg);color:var(--g-fg)}
   .tag.p{background:var(--pill-bg);color:var(--pill-fg)}
   .tag.a{background:var(--a-bg);color:var(--a-fg)}
+  .tag.r{background:var(--r-bg);color:var(--r-fg)}
+  .tag.b{background:var(--b-bg);color:var(--b-fg)}
   .act{display:flex;flex-direction:column;gap:9px}
   .act-btn{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none}
   .act-btn.g{background:var(--g-bg);color:var(--g-fg)}
@@ -360,6 +362,7 @@ _PANEL_HTML = r"""<!DOCTYPE html>
       <div class="nav-item" data-view="chat"><span class="nav-ico">💬</span> Conversaciones <span class="nav-badge" id="nav-conv-badge">0</span></div>
       <div class="nav-item" data-view="clientes"><span class="nav-ico">🗄️</span> Datos de Clientes</div>
       <div class="nav-item" data-view="segmentos"><span class="nav-ico">🎗️</span> Segmentación</div>
+      <div class="nav-item" data-view="citas" id="nav-citas" style="display:none"><span class="nav-ico">📅</span> Citas y Reservas</div>
       <div class="nav-item" data-view="masvendidos"><span class="nav-ico">📈</span> Más vendidos</div>
       <div class="nav-item" data-view="multimedia"><span class="nav-ico">📸</span> Multimedia</div>
       <div class="nav-item" data-view="comprobantes"><span class="nav-ico">🧾</span> Comprobantes</div>
@@ -450,6 +453,7 @@ function showView(v){
   else if(v==='masvendidos'){topbarSimple('📈 Más vendidos','Productos más vendidos y métricas');renderTopProducts();}
   else if(v==='multimedia'){topbarSimple('📸 Multimedia','Fotos y videos de cada producto (el bot y tú los envían al cliente)');renderMultimedia();}
   else if(v==='segmentos'){topbarSimple('🎗️ Segmentación','Clientes clasificados por tipo de piel/necesidad');renderSegmentos();}
+  else if(v==='citas'){topbarSimple('📅 Citas y Reservas','Agendadas por el bot o manualmente');renderCitas();}
   else if(v==='respuestas'){topbarSimple('⚡ Respuestas Rápidas','Plantillas de texto para responder más rápido');renderRespuestas();}
   else if(v==='comprobantes'){topbarSimple('🧾 Comprobantes','Archivo permanente de comprobantes de pago');renderComprobantes();}
   else if(v==='ayuda'){topbarSimple('❓ Ayuda','Cómo usar el panel');renderAyuda();}
@@ -1251,6 +1255,69 @@ function openConvByPhone(phone){
   else{toast('Abre Conversaciones para ver este chat');}
 }
 
+/* ─── CITAS Y RESERVAS ─── */
+async function renderCitas(){
+  $('#view').innerHTML='<div class="empty">Cargando…</div>';
+  let items=[];try{items=await api('/api/appointments');}catch(e){}
+  if(S.view!=='citas')return;
+  const statusLabel={pending:'Pendiente',confirmed:'Confirmada',cancelled:'Cancelada',completed:'Completada'};
+  const statusColor={pending:'a',confirmed:'g',cancelled:'r',completed:'b'};
+  const rows=items.length?items.map(a=>`
+    <tr data-id="${a.id}">
+      <td>${new Date(a.scheduled_at).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'})}</td>
+      <td>${a.customer_name||'—'}${a.customer_phone?`<div style="font-size:11px;color:var(--muted2)">+${a.customer_phone}</div>`:''}</td>
+      <td>${a.service||'—'}</td>
+      <td>${a.source==='bot'?'🤖 Bot':'✍️ Manual'}</td>
+      <td><span class="tag ${statusColor[a.status]||'p'}">${statusLabel[a.status]||a.status}</span></td>
+      <td style="white-space:nowrap">
+        <select class="search" style="width:130px;font-size:11px;padding:5px 8px" onchange="setCitaStatus(${a.id},this.value)">
+          ${Object.keys(statusLabel).map(s=>`<option value="${s}" ${s===a.status?'selected':''}>${statusLabel[s]}</option>`).join('')}
+        </select>
+        <button class="qbtn" style="padding:5px 9px" onclick="delCita(${a.id})">🗑️</button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan=6 class="empty">Sin citas agendadas todavía</td></tr>';
+  $('#view').innerHTML=`
+    <div class="card" style="max-width:900px;margin-bottom:18px">
+      <div class="card-h">➕ Agendar manualmente</div>
+      <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px">El bot también agenda solo cuando el cliente lo pide por WhatsApp — esto es para citas que agendes tú directamente.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Fecha</div><input class="search" type="date" id="ct-fecha" style="width:150px"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Hora</div><input class="search" type="time" id="ct-hora" style="width:120px"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Cliente</div><input class="search" id="ct-nombre" style="width:150px" placeholder="Nombre"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Teléfono</div><input class="search" id="ct-telefono" style="width:140px" placeholder="573001234567"></div>
+        <div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Servicio / motivo</div><input class="search" id="ct-servicio" style="width:180px"></div>
+        <button class="act-btn p" style="padding:9px 16px" onclick="createCita()">Agendar</button>
+      </div>
+    </div>
+    <div class="card" style="max-width:900px">
+      <div class="card-h">📅 Todas las citas</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha y hora</th><th>Cliente</th><th>Servicio</th><th>Origen</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+async function createCita(){
+  const fecha=$('#ct-fecha').value,hora=$('#ct-hora').value;
+  if(!fecha||!hora){toast('Pon la fecha y la hora');return;}
+  const body={
+    fecha,hora,
+    customer_name:$('#ct-nombre').value.trim(),
+    customer_phone:$('#ct-telefono').value.trim(),
+    service:$('#ct-servicio').value.trim(),
+  };
+  try{await api('/api/appointments',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify(body)});
+    toast('✅ Cita agendada');renderCitas();}
+  catch(e){toast('Error: '+e.message);}
+}
+async function setCitaStatus(id,status){
+  try{await api('/api/appointments/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({status})});toast('Estado actualizado');}
+  catch(e){toast('Error: '+e.message);}
+}
+async function delCita(id){
+  if(!confirm('¿Eliminar esta cita?'))return;
+  try{await api('/api/appointments/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}});renderCitas();}
+  catch(e){toast('Error: '+e.message);}
+}
+
 /* ─── RESPUESTAS RÁPIDAS ─── */
 async function renderRespuestas(){
   $('#view').innerHTML='<div class="empty">Cargando…</div>';
@@ -1808,6 +1875,7 @@ function currentTheme(){return localStorage.getItem('vitatheme')||'dark';}
 applyTheme(currentTheme());
 
 (function(){const{view,id}=parseHash();setActiveNav(view);showView(view);if(view==='chat'&&id)setTimeout(()=>openConv(id),400);})();
+(async function(){try{const info=await api('/api/company-info');const nav=document.getElementById('nav-citas');if(nav)nav.style.display=info.wants_appointments?'':'none';}catch(e){}})();
 setInterval(()=>{if(S.view==='chat'){pollMessages();}},3000);
 setInterval(()=>{
   // Solo el chat se actualiza en vivo (mensajes nuevos). El resto NO se re-renderiza

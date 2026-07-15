@@ -15,6 +15,15 @@ BUSINESS_TYPES = {
     "otro": "Otro / genérico",
 }
 
+# Tipos de negocio que manejan agenda (citas/reservas). Solo estos ven la
+# categoría "Citas y Reservas" en su panel, y solo a estos el bot les agenda
+# citas automáticamente.
+APPOINTMENT_BUSINESS_TYPES = {"servicios_citas", "restaurante", "inmobiliaria"}
+
+
+def wants_appointments(business_type: str) -> bool:
+    return business_type in APPOINTMENT_BUSINESS_TYPES
+
 # Campos extra sugeridos por rubro: {campo: etiqueta}. Se muestran como inputs
 # adicionales en el panel de la empresa; son solo una sugerencia de qué suele
 # necesitar ese rubro, no son obligatorios.

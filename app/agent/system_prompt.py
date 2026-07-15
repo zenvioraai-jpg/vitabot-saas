@@ -31,6 +31,7 @@ def _format_previous_session(messages: list) -> str:
 
 def build_system_prompt(
     company_name: str = "",
+    business_type: str = "otro",
     products: list[dict] | None = None,
     customer_name: str | None = None,
     is_first_message: bool = False,
@@ -70,6 +71,22 @@ def build_system_prompt(
             "\n━━━ INFORMACIÓN DEL NEGOCIO (configurada en el panel) ━━━\n" + extra_info.strip()
             + "\nÚsala con naturalidad cuando sea relevante para la conversación."
         )
+
+    # Agendar citas/reservas: SOLO para los tipos de negocio con agenda
+    from app.onboarding_templates import wants_appointments
+    appointment_ctx = ""
+    if wants_appointments(business_type):
+        appointment_ctx = """
+━━━ AGENDAR CITA / RESERVA ━━━
+Cuando el cliente quiera agendar una cita, reserva o visita (según el negocio), y ya tengas
+FECHA y HORA claras, incluye al inicio de tu respuesta la etiqueta:
+[CITA_AGENDADA: fecha=AAAA-MM-DD, hora=HH:MM, servicio=lo que va a hacer/reservar, nombre=NombreCompleto, notas=cualquier detalle adicional]
+- fecha SIEMPRE en formato AAAA-MM-DD (ej: 2026-07-20) y hora en HH:MM 24 horas (ej: 19:30).
+- Si el cliente da una fecha relativa ("mañana", "el viernes"), conviértela tú a AAAA-MM-DD real
+  usando el contexto de la conversación.
+- Confirma con calidez la cita al cliente después de emitir la etiqueta.
+- Si falta la fecha, la hora, o el servicio, PREGÚNTALOS antes de emitir la etiqueta — nunca
+  inventes un dato que el cliente no dio."""
 
     # Bloque de datos de pago (cuentas / Bre-B configuradas en el panel)
     pay_ctx = ""
@@ -371,6 +388,7 @@ Incluye solo los campos que el cliente realmente dio.
 Si el cliente dice que va a escribir/decidir/pagar MÁS ADELANTE en un plazo concreto, agrega al inicio
 de tu respuesta: [RECONTACTO: dias=N, motivo=lo que quedó pendiente]
 Si no vuelve en ese plazo, el sistema le recordará automáticamente. Usa la etiqueta UNA vez.
+{appointment_ctx}
 
 ━━━ PAGO CON QR / TRANSFERENCIA / LLAVE ━━━
 Cuando el cliente quiera pagar por transferencia/QR/llave, incluye [ENVIAR_QR] en tu respuesta y explica

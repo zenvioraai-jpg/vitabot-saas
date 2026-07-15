@@ -307,3 +307,24 @@ class Product(Base):
     data_json: Mapped[str] = mapped_column(Text, default="{}")  # campos libres (variantes, tallas, etc.)
     in_stock: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Appointment(Base):
+    """Cita o reserva (agendada por el bot o manualmente desde el panel). Solo
+    aplica a los tipos de negocio con agenda: servicios_citas, restaurante,
+    inmobiliaria (ver onboarding_templates.APPOINTMENT_BUSINESS_TYPES)."""
+    __tablename__ = "appointments"
+    __table_args__ = (Index("idx_appointments_company_date", "company_id", "scheduled_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_id: Mapped[int] = mapped_column(Integer, ForeignKey("companies.id"), nullable=False)
+    customer_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("customers.id"))
+    conversation_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("conversations.id"))
+    customer_name: Mapped[str | None] = mapped_column(String)
+    customer_phone: Mapped[str | None] = mapped_column(String)
+    service: Mapped[str | None] = mapped_column(String)   # servicio / mesa / propiedad a visitar
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="pending")  # pending | confirmed | cancelled | completed
+    source: Mapped[str] = mapped_column(String, default="manual")   # bot | manual
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

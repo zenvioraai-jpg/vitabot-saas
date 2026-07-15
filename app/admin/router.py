@@ -67,8 +67,12 @@ def _conv_to_dict(c, db) -> dict:
 @router.get("/api/company-info")
 def api_company_info(token: str = Query(default=""), db: Session = Depends(get_db)):
     """Info básica de la empresa dueña de este token (para pintar el nombre en el panel)."""
+    from app.onboarding_templates import wants_appointments
     company = _require_company(db, token)
-    return {"name": company.name, "business_type": company.business_type, "status": company.status}
+    return {
+        "name": company.name, "business_type": company.business_type, "status": company.status,
+        "wants_appointments": wants_appointments(company.business_type),
+    }
 
 
 @router.post("/api/seed-conversation")
@@ -1377,6 +1381,70 @@ def api_customer_tags(phone: str, token: str = Query(default=""), db: Session = 
 def api_segments(token: str = Query(default=""), db: Session = Depends(get_db)):
     company = _require_company(db, token)
     return crud.list_segmented_customers(db, company.id)
+
+
+# ── API: Citas / Reservas (solo negocios con agenda) ────────────────────────────
+
+@router.get("/api/appointments")
+def api_list_appointments(token: str = Query(default=""), upcoming: bool = Query(default=False),
+                          db: Session = Depends(get_db)):
+    company = _require_company(db, token)
+    return [
+        {
+            "id": a.id, "scheduled_at": a.scheduled_at.isoformat(),
+            "customer_name": a.customer_name or "", "customer_phone": a.customer_phone or "",
+            "service": a.service or "", "status": a.status, "source": a.source,
+            "notes": a.notes or "",
+        }
+        for a in crud.list_appointments(db, company.id, upcoming_only=upcoming)
+    ]
+
+
+@router.post("/api/appointments")
+async def api_create_appointment(body: dict, token: str = Query(default=""),
+                                 authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    """Agendar una cita MANUALMENTE desde el panel (no por el bot)."""
+    company = _require_company(db, _auth(token, authorization))
+    fecha = (body.get("fecha") or "").strip()
+    hora = (body.get("hora") or "").strip()
+    if not fecha or not hora:
+        raise HTTPException(status_code=400, detail="Falta la fecha o la hora")
+    try:
+        scheduled_at = datetime.strptime(f"{fecha} {hora}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato de fecha/hora inválido (usa AAAA-MM-DD y HH:MM)")
+    crud.create_appointment(
+        db, company_id=company.id, scheduled_at=scheduled_at,
+        customer_name=(body.get("customer_name") or "").strip(),
+        customer_phone=(body.get("customer_phone") or "").strip(),
+        service=(body.get("service") or "").strip(),
+        notes=(body.get("notes") or "").strip(),
+        source="manual", status="confirmed",
+    )
+    return {"status": "ok"}
+
+
+@router.post("/api/appointments/{appointment_id}/status")
+async def api_set_appointment_status(appointment_id: int, body: dict, token: str = Query(default=""),
+                                     authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    company = _require_company(db, _auth(token, authorization))
+    status = (body.get("status") or "").strip()
+    if status not in ("pending", "confirmed", "cancelled", "completed"):
+        raise HTTPException(status_code=400, detail="Estado inválido")
+    a = crud.set_appointment_status(db, company.id, appointment_id, status)
+    if not a:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    return {"status": "ok"}
+
+
+@router.delete("/api/appointments/{appointment_id}")
+async def api_delete_appointment(appointment_id: int, token: str = Query(default=""),
+                                 authorization: str = Header(default=""), db: Session = Depends(get_db)):
+    company = _require_company(db, _auth(token, authorization))
+    ok = crud.delete_appointment(db, company.id, appointment_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    return {"status": "ok"}
 
 
 class TagRequest(BaseModel):
