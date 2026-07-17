@@ -297,24 +297,47 @@ async function renderEmpresas(){
         </ol></div>
       </details>
       <details>
-        <summary>2️⃣ Cómo conseguir el número de WhatsApp y las credenciales en Meta</summary>
+        <summary>2️⃣ Número de PRUEBA: conectar, entrenar y probar el bot</summary>
         <div class="guide-body">
-          <p>Esto se hace UNA vez por cada empresa nueva, en la cuenta de Meta de esa empresa. Son 2 fases, SIEMPRE en este orden:</p>
-          <div class="tip">🧪 <b>Fase 1 — Número de prueba</b> (gratis, token que dura 24h): sirve para validar que el bot responde bien con el entrenamiento de la empresa, SIN arriesgar el número real. → <b>✅ Fase 2 — Número real</b> (token permanente que NO expira): solo se hace cuando ya se probó todo en la Fase 1 y se va a lanzar con clientes de verdad. Migrar de Fase 1 a Fase 2 es solo editar la empresa aquí con las nuevas credenciales — el bot, el entrenamiento y el historial de esa empresa NO cambian.</div>
+          <p>Esta fase es <b>gratis y sin riesgo</b> — sirve para dejar el bot completamente entrenado y probado ANTES de tocar el número real de la empresa. Hazlo siempre en este orden:</p>
+          <p><b>A. Crear la app de Meta</b></p>
           <ol>
             <li>Crea (o usa) una cuenta de <b>Meta Business</b> en <code>business.facebook.com</code>.</li>
             <li>Ve a <code>developers.facebook.com/apps</code> → <b>Crear app</b> → tipo <b>"Otro"</b> → <b>"Empresa"</b>.</li>
             <li>Agrega el producto <b>WhatsApp</b> a la app.</li>
           </ol>
-          <p><b>🧪 Opción A — Número de PRUEBA (gratis, recomendado para empezar):</b></p>
+          <p><b>B. Configurar el Webhook (una sola vez, en "Configuración de producción")</b></p>
+          <ol>
+            <li><b>URL de devolución de llamada:</b> <code>https://TU-DOMINIO/webhook</code> — es la MISMA para todas las empresas, el sistema identifica sola a cuál pertenece cada mensaje.</li>
+            <li><b>Identificador de verificación:</b> escribe cualquier palabra secreta que también pongas en Railway como variable <code>WEBHOOK_VERIFY_TOKEN</code> (una sola vez, sirve para todas las empresas).</li>
+            <li>Clic en <b>Verificar y guardar</b>, y cuando quede en verde, suscríbete al campo <b>messages</b>.</li>
+          </ol>
+          <p><b>C. Conseguir el número de prueba</b></p>
           <ol>
             <li>En <b>WhatsApp → Configuración de la API</b>, Meta ya te da un <b>número de prueba gratis</b> con un <b>token temporal</b> (dura 24h, lo regeneras cuando quieras desde la misma pantalla).</li>
             <li>En la sección <b>"Para: Números de teléfono"</b>, agrega tu propio celular como <b>destinatario autorizado</b> (Meta te envía un código para verificarlo).</li>
-            <li>Copia el <b>phone_number_id</b> y el <b>token temporal</b> — pégalos aquí marcando <b>"Es un número de prueba"</b> al crear la empresa.</li>
-            <li>Escríbele por WhatsApp a ese número de prueba desde tu celular ya autorizado, y verás responder al bot con lo que hayas puesto en Entrenamiento.</li>
+            <li>Copia el <b>phone_number_id</b> y el <b>token temporal</b>.</li>
           </ol>
-          <p><b>✅ Opción B — Número REAL de producción (cuando ya vayas a lanzar con clientes reales):</b></p>
-          <p style="color:#b45309"><b>⚠️ Sigue estos pasos EXACTAMENTE en este orden.</b> El error más común es generar un token "permanente" que en realidad no sirve porque falta un paso — y el número se desconecta días después sin aviso.</p>
+          <p><b>D. Conectar y entrenar en este panel</b></p>
+          <ol>
+            <li>Crea la empresa aquí (o edítala) → pega ese <code>phone_number_id</code> y el token temporal → marca <b>"Es un número de prueba"</b>.</li>
+            <li>Abre el panel de esa empresa (botón "Abrir panel") → <b>Configuración → Entrenamiento</b> → escribe toda la info del negocio (productos, precios, tono, reglas). El bot la usa de inmediato, sin esperar nada.</li>
+            <li>Repite y ajusta el entrenamiento las veces que haga falta — en número de prueba puedes romper y probar sin ningún riesgo.</li>
+          </ol>
+          <p><b>E. ✅ Verificar que de verdad funciona</b></p>
+          <ol>
+            <li>Desde el celular que autorizaste, escríbele por WhatsApp al número de prueba.</li>
+            <li>El bot debe responder en segundos con la info que entrenaste. Si no responde: revisa que el Webhook (paso B) haya quedado en verde y que el <code>phone_number_id</code> pegado en el panel sea EXACTAMENTE el de esta app.</li>
+            <li>Confirma también que la conversación aparece en <b>Chat en vivo</b> dentro del panel de esa empresa — así sabes que el mensaje sí llegó a tu servidor y no solo que WhatsApp respondió por su cuenta.</li>
+            <li>El token temporal vence a las 24h: cuando el bot deje de responder, vuelve a "Configuración de la API" en Meta, regenera el token, y actualízalo aquí editando la empresa. Esto es normal en la fase de prueba.</li>
+          </ol>
+          <div class="tip">💡 No pases al número real hasta que el bot responda bien en TODOS los casos que probaste (precios, productos, dudas comunes, etc.). Corregir el entrenamiento en número de prueba es gratis; hacerlo con clientes reales ya escribiendo cuesta credibilidad.</div>
+        </div>
+      </details>
+      <details>
+        <summary>3️⃣ Número REAL: token permanente y cómo verificar que funciona</summary>
+        <div class="guide-body">
+          <p style="color:#b45309"><b>⚠️ Solo haz esto cuando ya probaste todo en el número de prueba.</b> Sigue estos pasos EXACTAMENTE en este orden — el error más común es generar un token "permanente" que en realidad no sirve porque falta un paso, y el número se desconecta días después sin aviso.</p>
           <ol>
             <li><b>Número real:</b> en <b>Administrador de WhatsApp Business</b> (business.facebook.com → WhatsApp Manager), agrega el número real de la empresa. Ese número NO puede estar activo en la app normal de WhatsApp ni en WhatsApp Business normal al mismo tiempo — hay que darlo de baja de ahí primero (Meta te deja migrarlo). Verifícalo por SMS o llamada.</li>
             <li><b>PIN de verificación en 2 pasos:</b> en Configuración de la API, actívalo y guarda el PIN — Meta lo pide de vez en cuando y si se pierde el número se bloquea.</li>
@@ -328,16 +351,20 @@ async function renderEmpresas(){
             <li><b>Genera el token:</b> con el Usuario del sistema seleccionado, clic en <b>Generar nuevo token</b> → elige la app → marca los permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code> → en expiración elige <b>Nunca / Never</b> → Generar token.</li>
             <li><b>Cópialo YA:</b> Meta lo muestra <b>una sola vez</b>. Si lo cierras sin copiarlo, tienes que generar uno nuevo.</li>
             <li>Copia también el <b>phone_number_id</b> real desde Configuración de la API (es distinto al del número de prueba).</li>
-            <li>Edita la empresa aquí, pega las nuevas credenciales (phone_number_id + token permanente) y <b>desmarca "Es un número de prueba"</b>.</li>
-            <li><b>Verificación del negocio (recomendado antes de escalar):</b> sin verificar, el límite es de 250 conversaciones cada 24h. Al verificar el negocio (Configuración del negocio → Centro de seguridad → Verificación del negocio, con documentos legales de la empresa) el límite sube a 1.000 y luego sigue subiendo solo según el volumen y la calidad del número (revisado cada pocas horas por Meta).</li>
           </ol>
           <div class="tip">⚠️ Errores más comunes con el token permanente: (1) asignar solo la App al Usuario del sistema y olvidar la WABA — el token se genera pero falla al enviar mensajes; (2) dejar la expiración en 60 días en vez de "Nunca"; (3) el rol del Usuario del sistema no es Administrador. Si el bot deja de responder de un día para otro con esta empresa, revisa primero estos 3 puntos.</div>
-          <p><b>Para ambas opciones</b>, configura el <b>Webhook</b> en la misma pantalla de Meta: URL <code>https://TU-DOMINIO/webhook</code>, token de verificación (el que pongas en el servidor), suscríbete a <b>messages</b>.</p>
-          <div class="tip">💡 Todas las empresas comparten la MISMA url de webhook — el sistema identifica sola a cada una por su phone_number_id. No importa si es número de prueba o real, el webhook es igual.</div>
+          <p><b>✅ Verificar el token ANTES de conectarlo (3 formas, de más a menos rápida):</b></p>
+          <ol>
+            <li><b>Debugger de Meta (la más fácil):</b> <code>developers.facebook.com/tools/debug/accesstoken</code> → pega el token → clic en "Debug". Debe decir <b>"Expires: Never"</b> y mostrar los permisos <code>whatsapp_business_messaging</code> / <code>whatsapp_business_management</code>. Si dice una fecha de expiración, algo quedó mal en el paso 5 (revisa "Nunca/Never").</li>
+            <li><b>Prueba directa a la API</b> (opcional, si sabes usar la terminal): <code>curl "https://graph.facebook.com/v22.0/&lt;phone_number_id&gt;?access_token=&lt;TU_TOKEN&gt;"</code> — si devuelve datos del número (no un error de permisos), el token y el phone_number_id están bien emparejados.</li>
+            <li><b>Prueba real (la que realmente importa):</b> edita la empresa aquí con el <code>phone_number_id</code> y el token permanente, <b>desmarca "Es un número de prueba"</b>, y desde un celular cualquiera (ya no hace falta autorizarlo, es el número real) escríbele por WhatsApp. Debe responder igual que en la fase de prueba y la conversación debe verse en el Chat en vivo del panel.</li>
+          </ol>
+          <p><b>Verificación del negocio (recomendado antes de escalar):</b> sin verificar, el límite es de 250 conversaciones cada 24h. Al verificar el negocio (Configuración del negocio → Centro de seguridad → Verificación del negocio, con documentos legales de la empresa) el límite sube a 1.000 y luego sigue subiendo solo según el volumen y la calidad del número (revisado cada pocas horas por Meta).</p>
+          <div class="tip">💡 El Webhook (URL + identificador de verificación) que configuraste en la fase de prueba NO cambia al pasar al número real — es el mismo para toda la app de Meta. Solo cambian el phone_number_id y el token.</div>
         </div>
       </details>
       <details>
-        <summary>3️⃣ Cómo crear plantillas de mensajes aprobadas por Meta</summary>
+        <summary>4️⃣ Cómo crear plantillas de mensajes aprobadas por Meta</summary>
         <div class="guide-body">
           <ol>
             <li><code>business.facebook.com</code> → <b>WhatsApp Manager</b> → <b>Plantillas de mensajes</b> → <b>Crear plantilla</b>.</li>
