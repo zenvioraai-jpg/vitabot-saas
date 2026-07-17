@@ -299,7 +299,8 @@ async function renderEmpresas(){
       <details>
         <summary>2️⃣ Cómo conseguir el número de WhatsApp y las credenciales en Meta</summary>
         <div class="guide-body">
-          <p>Esto se hace UNA vez por cada empresa nueva, en la cuenta de Meta de esa empresa. Empieza SIEMPRE con la Opción A (gratis) para probar el bot antes de conectar el número real.</p>
+          <p>Esto se hace UNA vez por cada empresa nueva, en la cuenta de Meta de esa empresa. Son 2 fases, SIEMPRE en este orden:</p>
+          <div class="tip">🧪 <b>Fase 1 — Número de prueba</b> (gratis, token que dura 24h): sirve para validar que el bot responde bien con el entrenamiento de la empresa, SIN arriesgar el número real. → <b>✅ Fase 2 — Número real</b> (token permanente que NO expira): solo se hace cuando ya se probó todo en la Fase 1 y se va a lanzar con clientes de verdad. Migrar de Fase 1 a Fase 2 es solo editar la empresa aquí con las nuevas credenciales — el bot, el entrenamiento y el historial de esa empresa NO cambian.</div>
           <ol>
             <li>Crea (o usa) una cuenta de <b>Meta Business</b> en <code>business.facebook.com</code>.</li>
             <li>Ve a <code>developers.facebook.com/apps</code> → <b>Crear app</b> → tipo <b>"Otro"</b> → <b>"Empresa"</b>.</li>
@@ -313,12 +314,24 @@ async function renderEmpresas(){
             <li>Escríbele por WhatsApp a ese número de prueba desde tu celular ya autorizado, y verás responder al bot con lo que hayas puesto en Entrenamiento.</li>
           </ol>
           <p><b>✅ Opción B — Número REAL de producción (cuando ya vayas a lanzar con clientes reales):</b></p>
+          <p style="color:#b45309"><b>⚠️ Sigue estos pasos EXACTAMENTE en este orden.</b> El error más común es generar un token "permanente" que en realidad no sirve porque falta un paso — y el número se desconecta días después sin aviso.</p>
           <ol>
-            <li>En <b>Administrador de WhatsApp Business</b>, agrega el número real de la empresa (no puede estar ya activo en la app normal de WhatsApp) y verifícalo por SMS/llamada.</li>
-            <li><b>Token permanente</b>: Configuración del negocio → Usuarios del sistema → Agregar → asigna la app de WhatsApp → genera token con permisos <code>whatsapp_business_messaging</code> + <code>whatsapp_business_management</code>, sin expiración.</li>
-            <li>Copia el <b>phone_number_id</b> real desde Configuración de la API.</li>
-            <li>Edita la empresa aquí, pega las nuevas credenciales y <b>desmarca "Es un número de prueba"</b>.</li>
+            <li><b>Número real:</b> en <b>Administrador de WhatsApp Business</b> (business.facebook.com → WhatsApp Manager), agrega el número real de la empresa. Ese número NO puede estar activo en la app normal de WhatsApp ni en WhatsApp Business normal al mismo tiempo — hay que darlo de baja de ahí primero (Meta te deja migrarlo). Verifícalo por SMS o llamada.</li>
+            <li><b>PIN de verificación en 2 pasos:</b> en Configuración de la API, actívalo y guarda el PIN — Meta lo pide de vez en cuando y si se pierde el número se bloquea.</li>
+            <li><b>Crea el Usuario del sistema (System User):</b> Configuración del negocio → <b>Usuarios → Usuarios del sistema</b> → Agregar → nómbralo (ej: "Sistema WhatsApp") → rol <b>Administrador</b> → Crear.</li>
+            <li><b>Asígnale DOS activos, no uno solo</b> (esta es la parte que casi todos se saltan y por eso el token falla o deja de funcionar):
+              <ul>
+                <li>Clic en <b>Asignar activos → Cuentas de WhatsApp</b> → selecciona la <b>WABA</b> (WhatsApp Business Account) de esta empresa → <b>Control total</b>.</li>
+                <li>Clic en <b>Asignar activos → Apps</b> → selecciona la app que creaste → <b>Control total</b>.</li>
+              </ul>
+            </li>
+            <li><b>Genera el token:</b> con el Usuario del sistema seleccionado, clic en <b>Generar nuevo token</b> → elige la app → marca los permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code> → en expiración elige <b>Nunca / Never</b> → Generar token.</li>
+            <li><b>Cópialo YA:</b> Meta lo muestra <b>una sola vez</b>. Si lo cierras sin copiarlo, tienes que generar uno nuevo.</li>
+            <li>Copia también el <b>phone_number_id</b> real desde Configuración de la API (es distinto al del número de prueba).</li>
+            <li>Edita la empresa aquí, pega las nuevas credenciales (phone_number_id + token permanente) y <b>desmarca "Es un número de prueba"</b>.</li>
+            <li><b>Verificación del negocio (recomendado antes de escalar):</b> sin verificar, el límite es de 250 conversaciones cada 24h. Al verificar el negocio (Configuración del negocio → Centro de seguridad → Verificación del negocio, con documentos legales de la empresa) el límite sube a 1.000 y luego sigue subiendo solo según el volumen y la calidad del número (revisado cada pocas horas por Meta).</li>
           </ol>
+          <div class="tip">⚠️ Errores más comunes con el token permanente: (1) asignar solo la App al Usuario del sistema y olvidar la WABA — el token se genera pero falla al enviar mensajes; (2) dejar la expiración en 60 días en vez de "Nunca"; (3) el rol del Usuario del sistema no es Administrador. Si el bot deja de responder de un día para otro con esta empresa, revisa primero estos 3 puntos.</div>
           <p><b>Para ambas opciones</b>, configura el <b>Webhook</b> en la misma pantalla de Meta: URL <code>https://TU-DOMINIO/webhook</code>, token de verificación (el que pongas en el servidor), suscríbete a <b>messages</b>.</p>
           <div class="tip">💡 Todas las empresas comparten la MISMA url de webhook — el sistema identifica sola a cada una por su phone_number_id. No importa si es número de prueba o real, el webhook es igual.</div>
         </div>
